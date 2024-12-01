@@ -3,160 +3,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>儿童画画评分</title>
+    <title>HappyGrow - 儿童绘画评分系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #FF9800;
+            --accent-color: #2196F3;
+            --background-color: #F5F5F5;
+            --text-color: #333333;
+        }
+
         body {
-            font-family: 'Comic Sans MS', cursive, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f0f8ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
         }
+
         .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            padding: 2rem;
         }
-        h1 {
-            color: #ff6b6b;
-            text-align: center;
-        }
+
         .upload-area {
-            border: 3px dashed #4dc0b5;
-            border-radius: 10px;
-            padding: 20px;
+            background: white;
+            border: 3px dashed var(--primary-color);
+            border-radius: 1rem;
+            padding: 2rem;
             text-align: center;
-            margin: 20px 0;
+            transition: all 0.3s ease;
             cursor: pointer;
         }
+
         .upload-area:hover {
-            background-color: #f7f7f7;
+            border-color: var(--accent-color);
+            background-color: #f8f9fa;
         }
-        #preview {
-            max-width: 100%;
-            margin: 20px 0;
-            display: none;
+
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
         }
-        .result {
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 10px;
-            display: none;
-        }
-        .score {
-            font-size: 24px;
-            color: #38a169;
+
+        .preview-container {
+            margin: 2rem 0;
             text-align: center;
         }
-        .feedback {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f0fff4;
-            border-radius: 5px;
+
+        #imagePreview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        button {
-            background-color: #4dc0b5;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+
+        .score-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        button:hover {
-            background-color: #38a169;
+
+        .score-item {
+            margin: 1rem 0;
+        }
+
+        .progress {
+            height: 1.5rem;
+            border-radius: 0.75rem;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar {
+            background-color: var(--primary-color);
+            border-radius: 0.75rem;
+            transition: width 1s ease-in-out;
+        }
+
+        .feedback-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .suggestion-item {
+            background: #f8f9fa;
+            border-left: 4px solid var(--secondary-color);
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+
+        .age-group-selector {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #43A047;
+            border-color: #43A047;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 4rem;
+            height: 4rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎨 儿童画画评分</h1>
-        
-        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-            <p>点击或拖拽上传你的画作</p>
-            <input type="file" id="fileInput" accept="image/*" style="display: none">
-        </div>
+        <header class="text-center mb-5">
+            <h1 class="display-4">HappyGrow</h1>
+            <p class="lead">儿童绘画智能评分系统</p>
+        </header>
 
-        <img id="preview" alt="预览">
-        
-        <div style="text-align: center;">
-            <button onclick="uploadDrawing()" id="submitBtn" style="display: none;">提交评分</button>
-        </div>
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="age-group-selector">
+                    <label class="form-label">选择年龄组：</label>
+                    <select class="form-select" id="ageGroup">
+                        <option value="toddler">幼儿 (2-4岁)</option>
+                        <option value="preschool">学前 (4-6岁)</option>
+                        <option value="school" selected>学龄 (6-9岁)</option>
+                        <option value="preteen">少年 (9-12岁)</option>
+                    </select>
+                </div>
 
-        <div class="result" id="result">
-            <div class="score">
-                分数：<span id="score"></span>
+                <div class="upload-area" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>上传绘画作品</h3>
+                    <p>点击或拖拽图片到这里</p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="preview-container" style="display: none;">
+                    <img id="imagePreview" alt="预览">
+                </div>
+
+                <div id="results" style="display: none;">
+                    <div class="score-card">
+                        <h3>评分结果</h3>
+                        <div class="score-item">
+                            <label>颜色运用</label>
+                            <div class="progress">
+                                <div class="progress-bar" id="colorScore" role="progressbar"></div>
+                            </div>
+                        </div>
+                        <div class="score-item">
+                            <label>构图表现</label>
+                            <div class="progress">
+                                <div class="progress-bar" id="compositionScore" role="progressbar"></div>
+                            </div>
+                        </div>
+                        <div class="score-item">
+                            <label>创造力</label>
+                            <div class="progress">
+                                <div class="progress-bar" id="creativityScore" role="progressbar"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feedback-card">
+                        <h3>评价反馈</h3>
+                        <div id="overallFeedback" class="mb-3"></div>
+                        <div id="specificFeedback" class="mb-3"></div>
+                        <div id="encouragement" class="mb-3"></div>
+                        <h4>改进建议</h4>
+                        <div id="suggestions"></div>
+                    </div>
+                </div>
             </div>
-            <div class="feedback" id="feedback"></div>
         </div>
     </div>
 
+    <div class="loading-overlay">
+        <div class="spinner-border loading-spinner text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const preview = document.getElementById('preview');
-        const submitBtn = document.getElementById('submitBtn');
-        const result = document.getElementById('result');
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const imagePreview = document.getElementById('imagePreview');
+            const previewContainer = document.querySelector('.preview-container');
+            const results = document.getElementById('results');
+            const loadingOverlay = document.querySelector('.loading-overlay');
 
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    submitBtn.style.display = 'inline-block';
+            // 拖放处理
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#2196F3';
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#4CAF50';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#4CAF50';
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
                 }
-                reader.readAsDataURL(file);
-            }
-        });
+            });
 
-        function uploadDrawing() {
-            const formData = new FormData();
-            formData.append('drawing', fileInput.files[0]);
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
 
-            fetch('/score', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            function handleFile(file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('请上传图片文件');
                     return;
                 }
-                document.getElementById('score').textContent = data.score;
-                document.getElementById('feedback').textContent = data.feedback;
-                result.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('上传失败，请重试');
-            });
-        }
 
-        // 支持拖拽上传
-        const uploadArea = document.querySelector('.upload-area');
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                    uploadImage(file);
+                };
+                reader.readAsDataURL(file);
+            }
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, preventDefaults, false);
+            async function uploadImage(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('age_group', document.getElementById('ageGroup').value);
+
+                loadingOverlay.style.display = 'flex';
+                results.style.display = 'none';
+
+                try {
+                    const response = await fetch('/analyze', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        displayResults(data);
+                    } else {
+                        alert(data.error || '上传失败');
+                    }
+                } catch (error) {
+                    alert('处理图片时发生错误');
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
+            }
+
+            function displayResults(data) {
+                // 显示评分
+                document.getElementById('colorScore').style.width = `${data.scores.color_usage * 100}%`;
+                document.getElementById('colorScore').textContent = `${Math.round(data.scores.color_usage * 100)}分`;
+                
+                document.getElementById('compositionScore').style.width = `${data.scores.composition * 100}%`;
+                document.getElementById('compositionScore').textContent = `${Math.round(data.scores.composition * 100)}分`;
+                
+                document.getElementById('creativityScore').style.width = `${data.scores.creativity * 100}%`;
+                document.getElementById('creativityScore').textContent = `${Math.round(data.scores.creativity * 100)}分`;
+
+                // 显示反馈
+                document.getElementById('overallFeedback').textContent = data.feedback.overall;
+                document.getElementById('specificFeedback').textContent = data.feedback.specific;
+                document.getElementById('encouragement').textContent = data.feedback.encouragement;
+
+                // 显示建议
+                const suggestionsContainer = document.getElementById('suggestions');
+                suggestionsContainer.innerHTML = '';
+                data.suggestions.forEach(suggestion => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.textContent = suggestion;
+                    suggestionsContainer.appendChild(div);
+                });
+
+                results.style.display = 'block';
+                results.scrollIntoView({ behavior: 'smooth' });
+            }
         });
-
-        function preventDefaults (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        uploadArea.addEventListener('drop', handleDrop, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-
-            fileInput.files = files;
-            const event = new Event('change');
-            fileInput.dispatchEvent(event);
-        }
     </script>
 </body>
 </html>

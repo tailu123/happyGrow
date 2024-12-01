@@ -1,89 +1,86 @@
-from flask import Flask, render_template, request, jsonify
-from PIL import Image
-import io
-import imghdr
+"""
+HappyGrow - 儿童绘画评分系统主应用
+"""
+from flask import Flask, request, jsonify, render_template
+import os
+from happygrow.services.image_service import ImageService
+from happygrow.core.scoring_engine import ScoringEngine
+from happygrow.core.feedback_generator import FeedbackGenerator
+from happygrow.config.config import SERVER_CONFIG, BASE_DIR
 
 app = Flask(__name__)
 
-def analyze_drawing(image):
-    """
-    分析儿童画作的函数
-    参数:
-    - image: PIL Image对象
-    返回:
-    - score: 评分 (0-100)
-    - feedback: 反馈建议
-    """
-    try:
-        # 获取图片信息
-        width, height = image.size
-        # 转换图片以获取颜色信息
-        rgb_image = image.convert('RGB')
-        colors = set()
-        for x in range(width):
-            for y in range(height):
-                colors.add(rgb_image.getpixel((x, y)))
-        unique_colors = len(colors)
-        
-        # 基础分数
-        score = 60
-        
-        # 根据画作的复杂度增加分数
-        if unique_colors > 10:
-            score += 20
-        if width * height > 100000:  # 大尺寸
-            score += 10
-            
-        # 确保分数在0-100之间
-        score = min(100, max(0, score))
-        
-        # 生成反馈
-        feedback = []
-        if score >= 80:
-            feedback.append("太棒了！你的画作非常丰富多彩！")
-        elif score >= 60:
-            feedback.append("做得不错！建议可以尝试使用更多种类的颜色。")
-        else:
-            feedback.append("继续加油！画画最重要的是开心！建议可以画得大一些，用更多颜色。")
-            
-        return score, " ".join(feedback)
-    except Exception as e:
-        app.logger.error(f"Error analyzing drawing: {str(e)}")
-        return 60, "抱歉，评分系统遇到了一些问题，但是我相信你的画作一定很棒！"
+# 配置上传文件夹
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/')
-def home():
+def index():
+    """渲染主页"""
     return render_template('index.html')
 
-@app.route('/score', methods=['POST'])
-def score_drawing():
-    # 检查是否有文件上传
-    if 'drawing' not in request.files:
-        return jsonify({'error': '没有上传图片'}), 400
-        
-    file = request.files['drawing']
-    if file.filename == '':
-        return jsonify({'error': '没有选择文件'}), 400
-        
+@app.route('/analyze', methods=['POST'])
+def analyze_drawing():
+    """分析上传的绘画"""
     try:
-        # 读取图片数据
-        image_bytes = file.read()
+        # 获取文件和年龄组
+        if 'file' not in request.files:
+            return jsonify({'error': '未找到上传的文件'}), 400
         
-        # 验证文件类型
-        if not imghdr.what(None, image_bytes):
-            return jsonify({'error': '请上传有效的图片文件'}), 400
-            
-        # 分析图片
-        image = Image.open(io.BytesIO(image_bytes))
-        score, feedback = analyze_drawing(image)
+        file = request.files['file']
+        age_group = request.form.get('age_group', 'school')
+        
+        # 验证图像
+        is_valid, error = ImageService.validate_image(file)
+        if not is_valid:
+            return jsonify({'error': error}), 400
+        
+        # 预处理图像
+        image = ImageService.preprocess_image(file)
+        
+        # 保存图像
+        saved_path = ImageService.save_image(image, file.filename, UPLOAD_FOLDER)
+        
+        # 评分分析
+        scoring_engine = ScoringEngine(image)
+        
+        # 分析各个维度
+        color_score, color_details = scoring_engine.analyze_color_usage()
+        composition_score, composition_details = scoring_engine.analyze_composition()
+        creativity_score, creativity_details = scoring_engine.analyze_creativity()
+        
+        # 整合评分
+        scores = {
+            'color_usage': color_score,
+            'composition': composition_score,
+            'creativity': creativity_score
+        }
+        
+        details = {
+            'color_usage': color_details,
+            'composition': composition_details,
+            'creativity': creativity_details
+        }
+        
+        # 生成反馈
+        feedback_generator = FeedbackGenerator(age_group, scores, details)
+        feedback = feedback_generator.generate_feedback()
+        suggestions = feedback_generator.get_improvement_suggestions()
         
         return jsonify({
-            'score': score,
-            'feedback': feedback
+            'scores': scores,
+            'feedback': feedback,
+            'suggestions': suggestions,
+            'image_path': os.path.relpath(saved_path, BASE_DIR)
         })
+        
     except Exception as e:
         app.logger.error(f"Error processing image: {str(e)}")
-        return jsonify({'error': '处理图片时出错'}), 500
+        return jsonify({'error': '处理图像时发生错误'}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(
+        host=SERVER_CONFIG['host'],
+        port=SERVER_CONFIG['port'],
+        debug=SERVER_CONFIG['debug']
+    )
