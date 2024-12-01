@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>儿童画画评分</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #ff6b6b;
+            text-align: center;
+        }
+        .upload-area {
+            border: 3px dashed #4dc0b5;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background-color: #f7f7f7;
+        }
+        #preview {
+            max-width: 100%;
+            margin: 20px 0;
+            display: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .score {
+            font-size: 24px;
+            color: #38a169;
+            text-align: center;
+        }
+        .feedback {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f0fff4;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4dc0b5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #38a169;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 儿童画画评分</h1>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <p>点击或拖拽上传你的画作</p>
+            <input type="file" id="fileInput" accept="image/*" style="display: none">
+        </div>
+
+        <img id="preview" alt="预览">
+        
+        <div style="text-align: center;">
+            <button onclick="uploadDrawing()" id="submitBtn" style="display: none;">提交评分</button>
+        </div>
+
+        <div class="result" id="result">
+            <div class="score">
+                分数：<span id="score"></span>
+            </div>
+            <div class="feedback" id="feedback"></div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const submitBtn = document.getElementById('submitBtn');
+        const result = document.getElementById('result');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    submitBtn.style.display = 'inline-block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function uploadDrawing() {
+            const formData = new FormData();
+            formData.append('drawing', fileInput.files[0]);
+
+            fetch('/score', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                document.getElementById('score').textContent = data.score;
+                document.getElementById('feedback').textContent = data.feedback;
+                result.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('上传失败，请重试');
+            });
+        }
+
+        // 支持拖拽上传
+        const uploadArea = document.querySelector('.upload-area');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            fileInput.files = files;
+            const event = new Event('change');
+            fileInput.dispatchEvent(event);
+        }
+    </script>
+</body>
+</html>
